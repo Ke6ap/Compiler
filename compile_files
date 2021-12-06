@@ -1,0 +1,3 @@
+flex scanner.l 
+bison -v -d syntax.y
+gcc syntax.tab.c lex.yy.c hashtbl.c -lm
