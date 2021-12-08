@@ -12,13 +12,14 @@ var
 
 begin
    {(* local variables *)}
-   x := 10;;
-   y := 20;;
+   x := 10 + 5;
+   y := 20;
    z := x + y;
    
    {(*global variables *)}
    a := 30;
    b:= 40;
+   (a := 43;
    c:= a + b;
 
 end;

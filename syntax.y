@@ -118,9 +118,9 @@ declarations:       constdefs typedefs vardefs
                     ;
 
 constdefs:          T_CONST     constant_defs   T_SEMI
-                    | error     constant_defs   T_SEMI  { yyerror("Wrong const declaration"); yyerrok ; }
-                    | T_SCONST  error           T_SEMI  { yyerror("Wrong const declaration"); yyerrok ; }
-                    | T_CONST   constant_defs   error   { yyerror("Wrong const declaration"); yyerrok ; }
+                    | error     constant_defs   T_SEMI  
+                    | T_SCONST  error           T_SEMI  
+                    | T_CONST   constant_defs   error   { yyerror("Forgot semicolon"); yyerrok ; }
                     | %empty                            { }
                     ;
 
@@ -137,11 +137,15 @@ expression:         expression   T_RELOP expression
                     | T_NOTOP expression
                     | T_PAIROP expression
                     | variable
-                    | T_ID T_LPAREN expressions T_RPAREN        { hashtbl_insert(hashtbl, $1 ,NULL,scope); }
+                    | T_ID T_LPAREN expressions T_RPAREN                { hashtbl_insert(hashtbl, $1 ,NULL,scope); }
                     | T_LENGTH T_LPAREN expression T_RPAREN
                     | constant
                     | T_LPAREN expression T_COLON expression T_RPAREN
                     | T_LPAREN expression T_RPAREN
+                    | error expression T_RPAREN                         { yyerror("Forgot opening parenthesis"); yyerrok ; }
+                    | T_LPAREN expression error                         { yyerror("Forgot closing parenthesis"); yyerrok ; }
+                    | T_LPAREN expression T_COLON expression error      { yyerror("Forgot closing parenthesis"); yyerrok ; }
+                    | error expression T_COLON expression error         { yyerror("Forgot opening parenthesis"); yyerrok ; }
                     ;
 
 variable:           T_ID                                        { hashtbl_insert(hashtbl, $1 ,NULL,scope); }
@@ -253,7 +257,6 @@ statement:          assignment
 
 assignment:         variable T_ASSIGN   expression
                     | variable error    expression  { yyerror("Wrong assignment"); yyerrok ; }
-                    | variable T_ASSIGN error       { yyerror("Wrong assignment"); yyerrok ; }
                     ;
 
 if_statement:       T_IF expression T_THEN statement if_tail
@@ -314,17 +317,11 @@ int main(int argc,char *argv[]) {
             return -1;
         }
     }
-    /* lektikh analysh
-    do{
-        token = yylex();
-    } while(token != T_EOF);
-    */
 
     yyparse();
 
     fclose(yyin);
     hashtbl_destroy(hashtbl);
-    //yyterminate();
 
     return 0;
 
@@ -333,14 +330,8 @@ int main(int argc,char *argv[]) {
 void false_end_check(void){
 
     /*
-        H idea ths sunartishs einai oti epeidh mporei na yparxoyn kai alla kommatia begin/end mesa ston kwdika
-        na mporoyme na entopisoyme poia end antistixoyn se kleisimo scope kai poia end se kleisimo begin
-        Gia auto exoyme to begin_counter kai to end_counter
-        Otan mpainoyme se ena begin auxanoume to counter kata 1. Antistixa otan mpainoume se ena end auxanoume to counter kata 1
-        Otan ftasoume se end koitame an einai ta counters einai isa dhladh an einai to idio swma begin/end
-        an oxi apla meiwnoume to counter tou begin kai arxikopoioume me 0 to counter tou end
-        auto tha ginei mexri na tautistoun oi 2 ties
-        Otan ta counters ginoun isa exoume ftasei sto telos enos scope opote kanoume pop to hashtable
+        An sunantisei perissotera begin apo end meiwnei to begin kata 1 kai
+        psaxnei to kurio swma ths function/procedure to opoio einai to end = 1
     */
 
     if (begin_count == end_count){
@@ -356,7 +347,12 @@ void false_end_check(void){
 }
 
 void end_of_declarations_check(void){
-    //meta th dhlwsh toy prwtoy procedure teleiwnei to kommati ths dhlwshs synarthsewn
+
+    /*
+        Meta th dhlwsh toy prwtoy procedure teleiwnei to kommati ths dhlwshs synarthsewn
+        ara de xreiazetai na kanoume kati me to token forward
+    */
+    
     if (declarations_end){
         scope++;
     }else{
